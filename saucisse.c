@@ -106,8 +106,8 @@ void affiche_saucisse(int offset,
     #undef INDENT
 }
 
-// Reading Animation
-void reading_animation(FILE *f,
+// Reading animée
+void reading_animee(FILE *f,
                        int max_offset,
                        const char *color,
                        const char *eyes,
@@ -267,7 +267,7 @@ int main(int argc, char *argv[]) {
         f = stdin;
     }
 
-    reading_animation(f, bouge ? distance : 0, color, eyes, poignet);
+    reading_animee(f, bouge ? distance : 0, color, eyes, poignet);
 
     if (f != stdin) fclose(f);
 
