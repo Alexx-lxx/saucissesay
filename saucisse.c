@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <stdlib.h> 
 
+// Couleurs 
 #define RESET   "\033[0m"
 #define ROUGE   "\033[31m"
 #define VERT    "\033[32m"
@@ -173,6 +174,128 @@ void reading_animee(FILE *f,
     fflush(stdout);
 }
 
+
+// Fonctions pour le tamagoshi
+
+int generer_entier(int borne) {
+    
+    /* Genere un nombre aleatoire dans l'interval entier [0;borne-1]*/
+    int nombre ;
+    nombre = rand () % borne;
+
+    return nombre;
+}
+
+int generer_signe(int entier) {
+    int signe = generer_entier(2);
+    if (signe == 0) 
+        return entier;
+    else 
+        return (-entier);
+}
+
+int stock_update(int stock, int lunchfood) {
+    int crop = generer_signe(generer_entier(4));
+    int newstock = (stock - lunchfood) + crop;
+
+    if (newstock < 0) 
+        newstock = 0;
+    if (newstock > 10)
+        newstock = 10;
+
+    return newstock;
+}
+
+int fitness_update(int fitness, int lunchfood) {
+    int digestion = -generer_entier(4);
+    int newfitness = (fitness + lunchfood) + digestion;
+
+    if (newfitness < 0)
+        newfitness = 0;
+    if (newfitness > 10)
+        newfitness = 10;
+
+    return newfitness;
+}
+
+void affiche_tamagoshi(int etat) {
+    if (etat == 0) {
+        affiche_bulle(0, "Tout va bien !");
+        affiche_saucisse(0, "^^", " π ", " ");
+    } else if (etat == 1) {
+        affiche_bulle(0, "Je ne me sens pas bien...");
+        affiche_saucisse(0, "~~", "#*#", " ");
+    } else {
+        affiche_bulle(0, "...");
+        affiche_saucisse(0, "XX", "¿¿", "U");
+    }
+}
+
+void jeu_tamagoshi(char *nom) {
+    
+    // Initialisation de l'aléatoire
+    srand (getpid());
+    
+    char rejouer = 'o';
+    int record = 0;
+
+    while (rejouer == 'o') {
+        int etat = 0;
+        int fitness = 5;
+        int stock = 5;
+        int lunchfood;
+        int duree_de_vie = 0;
+
+        while (etat != 2) {
+            if ((fitness <= 6)&&(fitness >= 4)) 
+                // Etat Liferocks
+                etat = 0;
+            else if ((((fitness <= 3)&&(fitness >= 1))||((fitness <= 9)&&(fitness >= 7))))
+                // Etat Lifesucks
+                etat = 1;
+            else
+                // Etat Byebyelife
+                etat = 2;
+
+            duree_de_vie++;
+            update();
+            printf("|================ Jour %d =================|\n\n", duree_de_vie);
+            affiche_tamagoshi(etat);
+            
+            if (etat != 2) {    
+
+                printf("\n\nVous avez %d blé\n", stock);
+                printf("Combien de blé voulez vous donner à %s aujourd'hui ?\n", nom);
+                scanf("%d", &lunchfood);
+                
+                while (lunchfood > stock || lunchfood < 0) {
+                    if (lunchfood > stock)
+                        printf("Vous n'avez pas assez de blé\n");
+                    else
+                        printf("Vous ne pouvez pas donner une quantité négative de blé.\n");
+
+                    printf("Combien de blé voulez-vous donner à la %s aujourd'hui ?\n", nom);
+                    scanf("%d", &lunchfood);
+                }
+
+                stock = stock_update(stock, lunchfood);
+                fitness = fitness_update(fitness, lunchfood);
+            }
+        }
+
+        printf("%s a survécu %d jours\n\n", nom, duree_de_vie);
+        if (duree_de_vie > record) {
+            record = duree_de_vie;
+            printf("Nouveau record !\n");
+        }
+        printf("Votre record est %d jours\n\n", record);
+        printf("Voulez vous rejouer ? (o/n)\n");
+        scanf(" %c", &rejouer);
+        
+    }
+}
+
+
 int main(int argc, char *argv[]) {
     const char *eyes = "oo";
     const char *poignet = "   ";
@@ -180,8 +303,9 @@ int main(int argc, char *argv[]) {
     const char *message = " ";
     int bouge = 0;
     int distance = 0;
-    int read_mode = 0;
+    int mode = 0;
     const char *read_path = NULL;
+    char *nom = "la saucisse";
 
     int i = 1;
     while (i < argc) {
@@ -190,9 +314,16 @@ int main(int argc, char *argv[]) {
             i += 2;
         }
         else if (strcmp(argv[i], "-read") == 0) {
-            read_mode = 1;
+            mode = 1;
             if (i + 1 < argc && argv[i + 1][0] != '-') {
                 read_path = argv[i + 1];
+                i += 2;
+            } else i++;
+        }
+        else if (strcmp(argv[i], "-game") == 0) {
+            mode = 2;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                nom = argv[i + 1];
                 i += 2;
             } else i++;
         }
@@ -249,27 +380,37 @@ int main(int argc, char *argv[]) {
     }
 
     // Mode simple 
-    if (!read_mode) {
+    if (mode == 0) {
         if (color) printf("%s", color);
         affiche_bulle(0, message);
         affiche_saucisse(0, eyes, poignet, "  ");
         if (color) printf("%s", RESET);
-        return 0;
-    }
+    } 
 
     // Mode reading
-    FILE *f = NULL;
+    else if (mode == 1) {
 
-    if (read_path) {
-        f = fopen(read_path, "r");
-        if (!f) { perror("fopen"); return 1; }
-    } else {
-        f = stdin;
+        FILE *f = NULL;
+
+        if (read_path) {
+            f = fopen(read_path, "r");
+            if (!f) { perror("fopen"); return 1; }
+        } else {
+            f = stdin;
+        }
+
+        reading_animee(f, bouge ? distance : 0, color, eyes, poignet);
+
+        if (f != stdin) fclose(f);
     }
 
-    reading_animee(f, bouge ? distance : 0, color, eyes, poignet);
+    // Mode tamagoshi
+    else {
+        if (color) printf("%s", color);
+        jeu_tamagoshi(nom);
+        if (color) printf("%s", RESET);
+    }
 
-    if (f != stdin) fclose(f);
 
     return 0;
 }
