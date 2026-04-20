@@ -58,7 +58,7 @@ Essayez ces commandes pour voir immédiatement les fonctionnalités principales 
 
 ```bash
 # 1. Bulle simple (type cowsay)
-./saucisse -r "Salut !"
+./saucisse -r "Salut"
 
 # 2. Animation + couleur
 ./saucisse -bouge 30 -c cyan
