@@ -49,12 +49,12 @@ int fitness_update(int fitness, int lunchfood) {
 
 void affiche_tamagoshi(etat e) {
     
-    // Etat 0 : tout va bien
+    // Etat LIFEROCKS : tout va bien
     const char* yeux_bien[] = {"^^", "oo", "OO", "°°"};
     const char* poignet_bien[] = {" π ", " ω ", " U ", " ∩ "};
     const char* phrase_bien[] = {"Tout va bien !", "Quelle belle journée !", "Il fait beau aujourd'hui !", "Aucun problème dans ma vie !"};
 
-    // Etat 1 : pas bien
+    // Etat LIFESUCKS : pas bien
     const char* yeux_malade[] = {"~~", "--", "TT", "QQ"};
     const char* poignet_malade[] = {"#*#", "...", "___", "≈ ≈"};
     const char* phrase_malade[] = {"Je ne me sens pas très bien...", "J'ai un peu mal au ventre...", "Je crois que je vais tomber malade...", "Quelque chose ne va pas..."};
@@ -69,10 +69,12 @@ void affiche_tamagoshi(etat e) {
             affiche_bulle(0, phrase_malade[generer_entier(4)]);
             affiche_saucisse(0, yeux_malade[generer_entier(4)], poignet_malade[generer_entier(4)], " ");
             break;
+
         case BYEBYELIFE :
             affiche_bulle(0, "...");
             affiche_saucisse(0, "XX", "¿¿", "U");
             break ;
+
         default : 
             printf("Erreur") ;
             break ;
@@ -94,19 +96,42 @@ int nourrir_tamagoshi(int stock, char *nom) {
     
     printf("\n\nVous avez %d blé\n", stock);
     printf("Combien de blé voulez vous donner à %s aujourd'hui ?\n", nom);
-    scanf("%d", &lunchfood);
-                
-    while (lunchfood > stock || lunchfood < 0) {
-        if (lunchfood > stock)
-            printf("Vous n'avez pas assez de blé\n");
-        else
-            printf("Vous ne pouvez pas donner une quantité négative de blé.\n");
+    
+    int verif = scanf("%d", &lunchfood);
+    
+    while (verif != 1 || lunchfood < 0 || lunchfood > stock) {
 
-        printf("Combien de blé voulez-vous donner à la %s aujourd'hui ?\n", nom);
-        scanf("%d", &lunchfood);
+
+        if (verif != 1) {
+            printf("Erreur, vous devez entrer un nombre\n");
+            scanf("%*s"); // Supprime la dernière entrée lue pour éviter une boucle infinie
+        } else if (lunchfood < 0) {
+            printf("Vous ne pouvez pas donner une quantité négative de blé.\n");
+        } else if (lunchfood > stock) {
+            printf("Vous n'avez pas assez de blé\n");
+        }
+
+        if (verif != 1 || lunchfood < 0 || lunchfood > stock) {
+            printf("Combien de blé voulez-vous donner à %s aujourd'hui ?\n", nom);
+            verif = scanf("%d", &lunchfood);
+    
+        }
     }
 
     return lunchfood ;
+}
+
+void affiche_var_stock(int var_stock) {
+    if (var_stock == -4) // Traite le premier jours.
+        printf("\n");
+    else {
+        if (var_stock > 0) 
+            printf("Génial ! une livraison de %d blés est arrivée cette nuit !\n", var_stock);
+        else if (var_stock < 0)
+            printf("Aie... %d de blés ont pourris cette nuit...\n", -var_stock);
+        else 
+            printf("Il n'est rien arrivé à votre stock de blé cette nuit !\n");
+    }
 }
 
 
@@ -114,23 +139,34 @@ int partie_tamagoshi(char *nom) {
     etat etat_courant = LIFEROCKS;
     int fitness = 5;
     int stock = 5;
+    int new_stock;
+    int var_stock = -4; // Valeur impossible, traite le premier jours
     int lunchfood;
     int duree_de_vie = 1;
 
-
     while (etat_courant != BYEBYELIFE) {
 
+        // Affichage
         update();
         printf("|================ Jour %d =================|\n\n", duree_de_vie);
         affiche_tamagoshi(etat_courant);
-        
+        affiche_var_stock(var_stock);
+
+        // Nourrir le tamagoshi
         lunchfood = nourrir_tamagoshi(stock, nom);
 
-        stock = stock_update(stock, lunchfood);
+        // Mise à jours du stock et de la variation du stock pour l'affichage
+        new_stock = stock_update(stock, lunchfood);
+        var_stock = new_stock - stock + lunchfood ;
+        stock = new_stock ;
+
+        // Mise à jours de la santé
         fitness = fitness_update(fitness, lunchfood);
 
+        // Mise à jours de l'état
         etat_courant = calculer_etat(fitness) ; 
         
+        // Incrémentation du jours
         duree_de_vie++;
         
     }
@@ -162,7 +198,8 @@ void jeu_tamagoshi(char *nom) {
         }
         printf("Votre record est %d jours\n\n", record);
         printf("Voulez vous rejouer ? (o/n)\n");
-        scanf(" %c", &rejouer);
         
+        scanf(" %c", &rejouer);
+
     }
 }
